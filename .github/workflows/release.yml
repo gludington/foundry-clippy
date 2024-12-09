@@ -5,6 +5,11 @@ on:
     tags:
       - 'v*'  # This will trigger on tags starting with 'v', like v1.0.0, v1.1.0, etc.
 
+permissions:
+  contents: write  # To upload assets to the release
+  id-token: write  # To allow interaction with GitHub's authentication service
+  actions: read  # For action to interact with the repository
+  
 jobs:
   build:
     runs-on: ubuntu-latest
