@@ -144,7 +144,6 @@ const checkWaitFor = (hook, args) => {
                     matches.push(entry[0]);
                 }
                 if (currentStep.context) {
-                    debugger;
                     const ctx = new Function(['context', 'hookArgs'], currentStep.context)(entry[1].context, [...args]);
                     entry[1].context = ctx;
                 }
@@ -238,7 +237,7 @@ Hooks.on("ready", async () => {
 
     // expose a public facing api
     game.modules.get(MODULE_ID).api = { start: async () => {
-        //userStatus.clear();
+        userStatus.clear();
         outputTemplate("greeting.hbs", { content: localize("greeting"), workflows}).then(content => {
             say(content);
         });

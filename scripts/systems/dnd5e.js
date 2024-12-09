@@ -175,10 +175,16 @@ export const workflows = [
             }, {
                waitFor: "dnd5e.preUseActivity",
                test: `return "SpellData" === hookArgs[0]?.parent?.constructor?.name`,
-               context: `return hookArgs[0]?.parent`
+               context: `return hookArgs[0]`
             }, {
                 waitFor: "dnd5e.renderChatMessage",
-                test: `return context.parent.name && hookArgs[0].flavor.indexOf(context.parent.name) > -1`
+                test: `if (context.type === 'attack') {
+                        return context.parent.parent.name && hookArgs[0].flavor.indexOf(context.parent.parent.name) > -1;
+                    }
+                    if (context.type === 'save' || context.type === 'utility') {
+                        return $(hookArgs[1]).find('div.message-content span.title').html().indexOf(context.parent.parent.name) > -1;
+                    }
+                    return true;`
              }, {
                 say:`<p>Some spells will call up a dialog for you to confirm elements of your casting, while others will output the cast directly to the chat.  If you do not
                 want to open your character sheet every time, you can</p>`,
