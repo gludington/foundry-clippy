@@ -6,22 +6,30 @@ export const CLIPPY_IMAGE = `modules/${MODULE_ID}/assets/paperclip.png`;
 import { loadWorkflows } from "./systems/index.js";
 import { preloadTemplates, outputTemplate } from "../module/templateHelper.js";
 
-const userStatus = new Map(); //key id, value { workflow:any, currentStep:number, context:any?}
+/**
+ * @typedef {import('./types.js').Workflow} Workflow
+ */
+
+/**
+ * @type {Map<string, WorkflowContext>}
+ */
+const userStatus = new Map();
 /**
  * the workflows we are going to load on startup
- * //TODO override by modules? by configuration 
-*/ 
+ * @type {Workflow[]}
+ */
 let workflows;
 
 /**
  * A place to store the game.user.id
+ * @type {string}
  */
 let userId;
 
 /**
  * Output something to the chat.
  * @param {string} content 
- * @param {{ id, name}[]} an optional array of buttons pointing to workflows
+ * @param {string[]} an optional array of strings pointing to workflow ids
  */
 const say = async (content, buttons) => {
     if (buttons?.length) {
@@ -31,7 +39,7 @@ const say = async (content, buttons) => {
         content += await outputTemplate("bottombuttons.hbs", { buttons: links })
     }
     ChatMessage.create({
-        speaker: ChatMessage.getSpeaker({ alias: "Clippy"}),
+        speaker: ChatMessage.getSpeaker({ alias: CLIPPY}),
         whisper:[userId],
         content
     });    
@@ -65,7 +73,7 @@ export const log = (message, ...args) => {
 
 /**
  * Start a workflow at its first step and no context.
- * @param {any} workflow 
+ * @param {Workflow} workflow 
  */
 const startWorkflow = (workflow) => {
     userStatus.set(workflow.id, { workflow, current: 0 });
@@ -77,11 +85,11 @@ const startWorkflow = (workflow) => {
  * @param {string} id the id of the workflow
  */
 const nextStep = (id) => {
-    const workFlowAndValue = userStatus.get(id);
-    const total = workFlowAndValue.workflow.steps.length;
-    const next = workFlowAndValue.current + 1;
+    const workFlowContext = userStatus.get(id);
+    const total = workFlowContext.workflow.steps.length;
+    const next = workFlowContext.current + 1;
     if (total > next) {
-        userStatus.set(id, { ...workFlowAndValue, current: workFlowAndValue.current + 1})
+        userStatus.set(id, { ...workFlowContext, current: workFlowContext.current + 1})
         executeStep(id);
     } else {
         userStatus.delete(id);
@@ -93,12 +101,12 @@ const nextStep = (id) => {
  * @param {string} id the id of the flow to execute.
  */
 const executeStep = (id) => {
-    const workFlowAndValue = userStatus.get(id);
-    const currentStep = workFlowAndValue.workflow.steps[workFlowAndValue.current];
+    const workFlowContext = userStatus.get(id);
+    const currentStep = workFlowContext.workflow.steps[workFlowContext.current];
     const action = Object.keys(currentStep).find(key => ['say','waitFor'].indexOf(key) > -1);
     let skip = false;
     if (currentStep.unless) {
-        skip = new Function('context', currentStep.unless)(workFlowAndValue.context);
+        skip = new Function('context', currentStep.unless)(workFlowContext.context);
     }
     log(`${action} - ${skip}`)
     switch (action) {

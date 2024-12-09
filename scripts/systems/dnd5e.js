@@ -1,3 +1,10 @@
+/**
+ * @typedef {import('../types.js').Workflow} Workflow
+ */
+
+/**
+ * @type {Workflow[]}
+ */
 export const workflows = [
     {
         name: "Roll Initiative",
