@@ -39,7 +39,7 @@ const say = async (content, buttons) => {
         content += await outputTemplate("bottombuttons.hbs", { buttons: links })
     }
     ChatMessage.create({
-        speaker: ChatMessage.getSpeaker({ alias: CLIPPY}),
+        speaker: ChatMessage.getSpeaker({ alias: SPEAKER_ALIAS}),
         whisper:[userId],
         content
     });    
@@ -144,6 +144,7 @@ const checkWaitFor = (hook, args) => {
                     matches.push(entry[0]);
                 }
                 if (currentStep.context) {
+                    debugger;
                     const ctx = new Function(['context', 'hookArgs'], currentStep.context)(entry[1].context, [...args]);
                     entry[1].context = ctx;
                 }
@@ -156,7 +157,6 @@ const checkWaitFor = (hook, args) => {
 }
 
 Hooks.on("renderActorSheet", (sheet, html, data) => {
-    log("actor", sheet, html.html());
     html.find('a.item.control').each((idx, el) => {
         el.addEventListener("click", () => Hooks.call('foundryclippy.actorTabChange', el.getAttribute('data-tab')))
     })
@@ -176,7 +176,6 @@ Hooks.on("dnd5e.renderChatMessage", (message, originalHtml) => {
         }
         html.find(`button[data-${MODULE_ID}-action]`).on("click", event => {
             const action = event.currentTarget.getAttribute(`data-${MODULE_ID}-action`)
-            log(action)
             const workflow = workflows.find(workflow => workflow.id === action);
             if (!workflow) {
                 ui.notifications.error(localize("noworkflowforactionerror"));
@@ -192,7 +191,6 @@ Hooks.on("dnd5e.renderChatMessage", (message, originalHtml) => {
  */
 Hooks.on("getSceneControlButtons", (controls) => {
     const tokenButtons = controls.find(bank => bank.name == 'token');
-    log("tokenbuttons", tokenButtons)
     if (tokenButtons) {
         tokenButtons.tools.push({
             name: MODULE_ID,
@@ -228,7 +226,7 @@ Hooks.on("ready", async () => {
                     }
                 }
             })
-        })
+        });
     } catch (err) {
         log("Unable to load system", err);
         ui.notifications.error(localize("parseworkflowerror"));
@@ -240,7 +238,7 @@ Hooks.on("ready", async () => {
 
     // expose a public facing api
     game.modules.get(MODULE_ID).api = { start: async () => {
-        userStatus.clear();
+        //userStatus.clear();
         outputTemplate("greeting.hbs", { content: localize("greeting"), workflows}).then(content => {
             say(content);
         });
