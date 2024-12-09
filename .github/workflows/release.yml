@@ -3,13 +3,13 @@ name: Release Module
 on:
   push:
     tags:
-      - 'v*'  # This will trigger on tags starting with 'v', like v1.0.0, v1.1.0, etc.
+      - 'v*'
 
 permissions:
   contents: write  # To upload assets to the release
   id-token: write  # To allow interaction with GitHub's authentication service
   actions: read  # For action to interact with the repository
-  
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -19,52 +19,26 @@ jobs:
 
       - name: Create release zip
         run: |
-          zip -r your-module-${{ github.event.release.tag_name }}.zip *  # Adjust to match your project structure
-
-      - name: Upload release zip
-        uses: softprops/action-gh-release@v1
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./your-module-${{ github.event.release.tag_name }}.zip
-          asset_name: your-module-${{ github.event.release.tag_name }}.zip
-          asset_content_type: application/zip
+          zip -r your-module-${{ github.ref }}.zip *  # Adjust to match your project structure
 
       - name: Create versioned manifest
         run: |
           echo '{
-            "manifest": "https://github.com/${{ github.repository }}/releases/download/${{ github.event.release.tag_name }}/module.json",
-            "download": "https://github.com/${{ github.repository }}/releases/download/${{ github.event.release.tag_name }}/your-module-${{ github.event.release.tag_name }}.zip"
-          }' > "v${{ github.event.release.tag_name }}/module.json"
-
-      - name: Upload versioned manifest
-        uses: softprops/action-gh-release@v1
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./v${{ github.event.release.tag_name }}/module.json
-          asset_name: v${{ github.event.release.tag_name }}/module.json
-          asset_content_type: application/json
+            "manifest": "https://github.com/${{ github.repository }}/releases/download/${{ github.ref }}/module.json",
+            "download": "https://github.com/${{ github.repository }}/releases/download/${{ github.ref }}/your-module-${{ github.ref }}.zip"
+          }' > "v${{ github.ref }}/module.json"
 
       - name: Create latest manifest
         run: |
           echo '{
-            "manifest": "https://github.com/${{ github.repository }}/releases/download/${{ github.event.release.tag_name }}/module.json",
-            "download": "https://github.com/${{ github.repository }}/releases/download/${{ github.event.release.tag_name }}/your-module-${{ github.event.release.tag_name }}.zip"
+            "manifest": "https://github.com/${{ github.repository }}/releases/download/${{ github.ref }}/module.json",
+            "download": "https://github.com/${{ github.repository }}/releases/download/${{ github.ref }}/your-module-${{ github.ref }}.zip"
           }' > latest.json
 
-      - name: Deploy latest manifest to GitHub Pages
-        run: |
-          # Ensure the latest.json file is deployed to GitHub Pages
-          # Example: if using a directory like 'docs' for GitHub Pages
-          mkdir -p docs
-          cp latest.json docs/latest.json
-          git add docs/latest.json
-          git commit -m "Update latest manifest"
-          git push origin main
-
-      - name: Upload versioned manifest (final step)
+      - name: Upload release assets
         uses: softprops/action-gh-release@v1
         with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./latest.json
-          asset_name: latest.json
-          asset_content_type: application/json
+          files: |
+            your-module-${{ github.ref }}.zip
+            v${{ github.ref }}/module.json
+            latest.json
