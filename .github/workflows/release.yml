@@ -35,8 +35,8 @@ jobs:
       - name: Update module.json with version and latest URLs
         run: |
           # Create versioned manifest URL
-          VERSIONED_MANIFEST="https://github.com/${{ github.repository }}/releases/download/v${VERSION}/module.json"
-          DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/v${VERSION}/foundry-clippy-${VERSION}.zip"
+          VERSIONED_MANIFEST="https://github.com/${{ github.repository }}/releases/download/${VERSION}/module.json"
+          DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/${VERSION}/foundry-clippy-${VERSION}.zip"
           
           # Update the existing module.json with version-specific URLs
           jq --arg manifest_url "$VERSIONED_MANIFEST" \
@@ -57,6 +57,6 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            dist/foundry-clippy-${VERSION}.zip
+            dist/foundry-clippy-${env.VERSION}.zip
             dist/module.json
             dist/latest.json
