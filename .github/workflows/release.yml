@@ -18,17 +18,22 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Step 2: Create dist directory and zip the project (excluding .git files)
+      # Step 2: Extract version from tag
+      - name: Extract version
+        id: extract_version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV  # Set VERSION as an environment variable
+
+      # Step 3: Create dist directory and zip the project (excluding .git files)
       - name: Create dist directory and zip the project
         run: |
-          VERSION=${GITHUB_REF#refs/tags/}  # Clean version name
           mkdir -p dist
-          zip -r dist/foundry-clippy-${VERSION}.zip . -x ".git/*"  # Exclude .git files
+          zip -r dist/foundry-clippy-${VERSION}.zip . -x ".git/*" -d "dist/" # Exclude .git files
 
-      # Step 3: Update module.json with version and latest URLs
+      # Step 4: Update module.json with version and latest URLs
       - name: Update module.json with version and latest URLs
         run: |
-          VERSION=${GITHUB_REF#refs/tags/}  # Clean version name
           # Create versioned manifest URL
           VERSIONED_MANIFEST="https://github.com/${{ github.repository }}/releases/download/v${VERSION}/module.json"
           DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/v${VERSION}/foundry-clippy-${VERSION}.zip"
@@ -47,7 +52,7 @@ jobs:
              --arg download_url "$LATEST_DOWNLOAD_URL" \
              '. + { "manifest": $manifest_url, "download": $download_url }' module.json > dist/latest.json
 
-      # Step 4: Upload release assets (zip file and updated module.json files)
+      # Step 5: Upload release assets (zip file and updated module.json files)
       - name: Upload release assets
         uses: softprops/action-gh-release@v1
         with:
