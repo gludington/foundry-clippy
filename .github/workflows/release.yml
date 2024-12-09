@@ -3,42 +3,44 @@ name: Release Module
 on:
   push:
     tags:
-      - 'v*'
+      - 'v*'  # Trigger this workflow on version tags like v1.0.0, v1.1.0, etc.
 
 permissions:
-  contents: write  # To upload assets to the release
-  id-token: write  # To allow interaction with GitHub's authentication service
-  actions: read  # For action to interact with the repository
+  contents: write  # Required to upload assets to the release
+  id-token: write  # Needed to interact with GitHub's authentication service
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Create release zip
+      - name: Create dist directory and zip the project
         run: |
-          zip -r your-module-${{ github.ref }}.zip *  # Adjust to match your project structure
+          mkdir -p dist
+          zip -r dist/your-module-${{ github.ref }}.zip . -x ".git/*"  # Exclude .git files
 
       - name: Create versioned manifest
         run: |
+          mkdir -p dist/v${{ github.ref }}
           echo '{
             "manifest": "https://github.com/${{ github.repository }}/releases/download/${{ github.ref }}/module.json",
             "download": "https://github.com/${{ github.repository }}/releases/download/${{ github.ref }}/your-module-${{ github.ref }}.zip"
-          }' > "v${{ github.ref }}/module.json"
+          }' > dist/v${{ github.ref }}/module.json
 
       - name: Create latest manifest
         run: |
           echo '{
             "manifest": "https://github.com/${{ github.repository }}/releases/download/${{ github.ref }}/module.json",
             "download": "https://github.com/${{ github.repository }}/releases/download/${{ github.ref }}/your-module-${{ github.ref }}.zip"
-          }' > latest.json
+          }' > dist/latest.json
 
       - name: Upload release assets
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            your-module-${{ github.ref }}.zip
-            v${{ github.ref }}/module.json
-            latest.json
+            dist/your-module-${{ github.ref }}.zip
+            dist/v${{ github.ref }}/module.json
+            dist/latest.json
