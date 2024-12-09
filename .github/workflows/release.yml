@@ -3,41 +3,56 @@ name: Release Module
 on:
   push:
     tags:
-      - 'v*'  # Trigger this workflow on version tags like v1.0.0, v1.1.0, etc.
+      - 'v*'  # Trigger on version tags like v1.0.0, v1.1.0, etc.
 
 permissions:
-  contents: write  # Required to upload assets to the release
-  id-token: write  # Needed to interact with GitHub's authentication service
+  contents: write  # Allows GitHub Actions to upload release assets
+  id-token: write  # Allows interaction with GitHub authentication
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
+      # Step 1: Checkout the code
       - name: Checkout code
         uses: actions/checkout@v3
 
+      # Step 2: Create dist directory and zip the project (excluding .git files)
       - name: Create dist directory and zip the project
         run: |
           VERSION=${GITHUB_REF#refs/tags/}  # Remove refs/tags/ to get the clean version
           mkdir -p dist
-          zip -r dist/foundry-clippy-${VERSION}.zip . -x ".github/*"  # Exclude .git files
+          zip -r dist/your-module-${VERSION}.zip . -x ".git/*"  # Exclude .git files
 
-      - name: Create versioned manifest
+      # Step 3: Create or update versioned module.json and latest module.json
+      - name: Update module.json with version and latest URLs
         run: |
-          VERSION=${GITHUB_REF#refs/tags/}  # Remove refs/tags/ to get the clean version
-          mkdir -p dist/v${VERSION}
-          echo "{\"manifest\": \"https://github.com/${{ github.repository }}/releases/download/v${VERSION}/module.json\", \"download\": \"https://github.com/${{ github.repository }}/releases/download/v${VERSION}/your-module-${VERSION}.zip\"}" > dist/v${VERSION}/module.json
+          VERSION=${GITHUB_REF#refs/tags/}  # Clean version name
+          # Create versioned manifest URL
+          VERSIONED_MANIFEST="https://github.com/${{ github.repository }}/releases/download/v${VERSION}/module.json"
+          DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/v${VERSION}/your-module-${VERSION}.zip"
+          
+          # Update the existing module.json with version-specific URLs
+          jq --arg manifest_url "$VERSIONED_MANIFEST" \
+             --arg download_url "$DOWNLOAD_URL" \
+             '. + { "manifest": $manifest_url, "download": $download_url }' module.json > dist/module.json
 
-      - name: Create latest manifest
-        run: |
-          VERSION=${GITHUB_REF#refs/tags/}  # Remove refs/tags/ to get the clean version
-          echo "{\"manifest\": \"https://github.com/${{ github.repository }}/releases/download/v${VERSION}/module.json\", \"download\": \"https://github.com/${{ github.repository }}/releases/download/v${VERSION}/your-module-${VERSION}.zip\"}" > dist/latest.json
+          # Also create the 'latest' manifest for the most recent version
+          LATEST_MANIFEST="https://github.com/${{ github.repository }}/releases/download/latest/module.json"
+          LATEST_DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/latest/your-module-latest.zip"
+          
+          # Create or update the latest.json manifest
+          echo '{
+            "manifest": "'"$LATEST_MANIFEST"'",
+            "download": "'"$LATEST_DOWNLOAD_URL"'"
+          }' > dist/latest.json
 
+      # Step 4: Upload release assets (zip file and updated module.json files)
       - name: Upload release assets
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            dist/foundry-clippy-${VERSION}.zip
-            dist/v${VERSION}/module.json
+            dist/your-module-${VERSION}.zip
+            dist/module.json
             dist/latest.json
