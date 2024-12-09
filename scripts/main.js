@@ -1,0 +1,241 @@
+export const MODULE_ID = "foundry-clippy";
+export const API_GLOBAL_NAME = "FoundryClippy";
+export const SPEAKER_ALIAS = "Clippy";
+export const CLIPPY = "📎";
+export const CLIPPY_IMAGE = `modules/${MODULE_ID}/assets/paperclip.png`;
+import { loadWorkflows } from "./systems/index.js";
+import { preloadTemplates, outputTemplate } from "../module/templateHelper.js";
+
+const userStatus = new Map(); //key id, value { workflow:any, currentStep:number, context:any?}
+/**
+ * the workflows we are going to load on startup
+ * //TODO override by modules? by configuration 
+*/ 
+let workflows;
+
+/**
+ * A place to store the game.user.id
+ */
+let userId;
+
+/**
+ * Output something to the chat.
+ * @param {string} content 
+ * @param {{ id, name}[]} an optional array of buttons pointing to workflows
+ */
+const say = async (content, buttons) => {
+    if (buttons?.length) {
+        const links = buttons.map(butt => {
+            return workflows.find(flow => flow.id === butt);
+        })
+        content += await outputTemplate("bottombuttons.hbs", { buttons: links })
+    }
+    ChatMessage.create({
+        speaker: ChatMessage.getSpeaker({ alias: "Clippy"}),
+        whisper:[userId],
+        content
+    });    
+}
+
+/**
+ * Conveience function to call locationalization.
+ * @param {string} localKey the local key (without module id prefix)
+ * @returns the i18n content
+ */
+const localize = (localKey) => {
+    return game.i18n.localize(`${API_GLOBAL_NAME}.${localKey}`)
+}
+
+/**
+ * Log to the console.
+ * @param {string | any} message 
+ * @param  {...any} args other arguments to log
+ */
+export const log = (message, ...args) => {
+    if (args?.length) {
+        console.log(`${MODULE_ID} ${CLIPPY}| ${message}`, args);
+    } else {
+        if (typeof message === 'string') {
+            console.log(`${MODULE_ID} ${CLIPPY}| ${message}`);
+        } else {
+            console.log(`${MODULE_ID} ${CLIPPY}|`, message);
+        }
+    }
+}
+
+/**
+ * Start a workflow at its first step and no context.
+ * @param {any} workflow 
+ */
+const startWorkflow = (workflow) => {
+    userStatus.set(workflow.id, { workflow, current: 0 });
+    executeStep(workflow.id);
+}
+
+/**
+ * Proceed to the next step in the workflow.
+ * @param {string} id the id of the workflow
+ */
+const nextStep = (id) => {
+    const workFlowAndValue = userStatus.get(id);
+    const total = workFlowAndValue.workflow.steps.length;
+    const next = workFlowAndValue.current + 1;
+    if (total > next) {
+        userStatus.set(id, { ...workFlowAndValue, current: workFlowAndValue.current + 1})
+        executeStep(id);
+    } else {
+        userStatus.delete(id);
+    }
+}
+
+/**
+ * Execute a step in the workflow.  Could be part of nextStep, since it should only be called there, but broken out in case.
+ * @param {string} id the id of the flow to execute.
+ */
+const executeStep = (id) => {
+    const workFlowAndValue = userStatus.get(id);
+    const currentStep = workFlowAndValue.workflow.steps[workFlowAndValue.current];
+    const action = Object.keys(currentStep).find(key => ['say','waitFor'].indexOf(key) > -1);
+    let skip = false;
+    if (currentStep.unless) {
+        skip = new Function('context', currentStep.unless)(workFlowAndValue.context);
+    }
+    log(`${action} - ${skip}`)
+    switch (action) {
+        case "say":
+            if (!skip) {
+                say(currentStep.say, currentStep.buttons);
+            }
+            nextStep(id);
+            break;
+        case "waitFor":
+            if (skip) {
+                nextStep(id);
+            };
+            break;
+    }
+}
+
+/**
+ * Respond to foundryVTT hook we are waiting for.
+ * @param {string} hook the name of the hooks
+ * @param {*} args the args passed to the hook
+ */
+const checkWaitFor = (hook, args) => {
+    if (userStatus.size > 0) {
+        const matches = [];
+        userStatus.entries().forEach((entry) => {
+            const currentStep = entry[1].workflow.steps[entry[1].current];
+            if (currentStep.waitFor === hook) {
+                if (currentStep.test) {
+                    const result = new Function(['context', 'hookArgs'], currentStep.test)(entry[1].context, [...args]);
+                    if (result) {
+                        matches.push(entry[0])
+                    }                
+                } else {
+                    matches.push(entry[0]);
+                }
+                if (currentStep.context) {
+                    const ctx = new Function(['context', 'hookArgs'], currentStep.context)(entry[1].context, [...args]);
+                    entry[1].context = ctx;
+                }
+            }
+        })
+        matches.forEach((id) => {
+            nextStep(id)
+        })
+    }
+}
+
+Hooks.on("renderActorSheet", (sheet, html, data) => {
+    log("actor", sheet, html.html());
+    html.find('a.item.control').each((idx, el) => {
+        el.addEventListener("click", () => Hooks.call('foundryclippy.actorTabChange', el.getAttribute('data-tab')))
+    })
+})
+
+/**
+ * Specific hook for chat messages to replace the actor.  We could use actors, but apparently that relies on
+ * the actor having a token in the scene, and there are use cases where we dont want a clippy token hanging around.
+ * Besides, this way we can replace the image in config.
+ */
+Hooks.on("dnd5e.renderChatMessage", (message, originalHtml) => {
+    if (message?.speaker?.alias === SPEAKER_ALIAS) {        
+        const html = $(originalHtml);
+        const avatar = html.find('.avatar')
+        if (avatar) {            
+            originalHtml = avatar.html(`<img src="${CLIPPY_IMAGE}" alt = "${SPEAKER_ALIAS}"/>`);
+        }
+        html.find(`button[data-${MODULE_ID}-action]`).on("click", event => {
+            const action = event.currentTarget.getAttribute(`data-${MODULE_ID}-action`)
+            log(action)
+            const workflow = workflows.find(workflow => workflow.id === action);
+            if (!workflow) {
+                ui.notifications.error(localize("noworkflowforactionerror"));
+            } else {
+                startWorkflow(workflow);
+            }
+        })
+    }
+});
+
+/**
+ * Add the clippy button to the left button panels in the token group.
+ */
+Hooks.on("getSceneControlButtons", (controls) => {
+    const tokenButtons = controls.find(bank => bank.name == 'token');
+    log("tokenbuttons", tokenButtons)
+    if (tokenButtons) {
+        tokenButtons.tools.push({
+            name: MODULE_ID,
+            title: localize("askclippy"),
+            icon: "fa fa-paperclip",
+            button: true,
+            visible: true,
+            onClick: (toggle) => {
+                FoundryClippy.start();
+            }
+        })
+    }
+});
+
+/**
+ * initlize clippy on ready.
+ */
+Hooks.on("ready", async () => {
+    log(`Initializing for system ${game.system.id}`);
+    userId = game.user.id;
+    try {
+        workflows = await loadWorkflows(game.system);
+        log(`Loaded for ${game.system.id}`, workflows);
+        
+        //add a single listener for every hook our system wants to listen to
+        const foundHooks = new Map();
+        workflows.forEach(workflow => {
+            workflow.steps.forEach(step => {
+                if (step.waitFor) {
+                    if (!foundHooks.has(step.waitFor)) {
+                        Hooks.on(step.waitFor, (...args) => checkWaitFor(step.waitFor, args));
+                        foundHooks.set(step.waitFor, true);
+                    }
+                }
+            })
+        })
+    } catch (err) {
+        log("Unable to load system", err);
+        ui.notifications.error(localize("parseworkflowerror"));
+        return;
+    }
+    // preload our tempaltes
+    const templates = await preloadTemplates();
+    log(templates);
+
+    // expose a public facing api
+    game.modules.get(MODULE_ID).api = { start: async () => {
+        userStatus.clear();
+        outputTemplate("greeting.hbs", { content: localize("greeting"), workflows}).then(content => {
+            say(content);
+        });
+    }}
+    window[API_GLOBAL_NAME] = game.modules.get(MODULE_ID).api;
+})

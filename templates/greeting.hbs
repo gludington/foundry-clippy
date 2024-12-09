@@ -1,0 +1,7 @@
+<div class="message-content">{{ content }}</div>
+<hr/>
+<div class="card-buttons">
+    {{#each workflows}}
+    <button type="button" data-foundry-clippy-action="{{this.id}}">{{this.name}}</button>
+    {{/each}}
+</div>
