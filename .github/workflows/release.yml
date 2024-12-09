@@ -19,28 +19,31 @@ jobs:
 
       - name: Create dist directory and zip the project
         run: |
+          VERSION=${GITHUB_REF#refs/tags/}  # Remove refs/tags/ to get the clean version
           mkdir -p dist
-          zip -r dist/your-module-${{ github.ref }}.zip . -x ".git/*"  # Exclude .git files
+          zip -r dist/your-module-${VERSION}.zip . -x ".git/*"  # Exclude .git files
 
       - name: Create versioned manifest
         run: |
-          mkdir -p dist/v${{ github.ref }}
+          VERSION=${GITHUB_REF#refs/tags/}  # Remove refs/tags/ to get the clean version
+          mkdir -p dist/v${VERSION}
           echo '{
-            "manifest": "https://github.com/${{ github.repository }}/releases/download/${{ github.ref }}/module.json",
-            "download": "https://github.com/${{ github.repository }}/releases/download/${{ github.ref }}/your-module-${{ github.ref }}.zip"
-          }' > dist/v${{ github.ref }}/module.json
+            "manifest": "https://github.com/${{ github.repository }}/releases/download/v${VERSION}/module.json",
+            "download": "https://github.com/${{ github.repository }}/releases/download/v${VERSION}/your-module-${VERSION}.zip"
+          }' > dist/v${VERSION}/module.json
 
       - name: Create latest manifest
         run: |
+          VERSION=${GITHUB_REF#refs/tags/}  # Remove refs/tags/ to get the clean version
           echo '{
-            "manifest": "https://github.com/${{ github.repository }}/releases/download/${{ github.ref }}/module.json",
-            "download": "https://github.com/${{ github.repository }}/releases/download/${{ github.ref }}/your-module-${{ github.ref }}.zip"
+            "manifest": "https://github.com/${{ github.repository }}/releases/download/v${VERSION}/module.json",
+            "download": "https://github.com/${{ github.repository }}/releases/download/v${VERSION}/your-module-${VERSION}.zip"
           }' > dist/latest.json
 
       - name: Upload release assets
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            dist/your-module-${{ github.ref }}.zip
-            dist/v${{ github.ref }}/module.json
+            dist/your-module-${VERSION}.zip
+            dist/v${VERSION}/module.json
             dist/latest.json
