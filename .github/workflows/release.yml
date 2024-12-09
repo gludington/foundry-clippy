@@ -57,6 +57,6 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            dist/foundry-clippy-${env.VERSION}.zip
+            dist/foundry-clippy-${{ VERSION }}.zip
             dist/module.json
             dist/latest.json
