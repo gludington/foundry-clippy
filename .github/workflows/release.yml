@@ -45,7 +45,7 @@ jobs:
           # Full content of the latest.json file
           jq --arg manifest_url "$LATEST_MANIFEST" \
              --arg download_url "$LATEST_DOWNLOAD_URL" \
-             '. + { "manifest": $manifest_url, "download": $download_url }' <<< '{}' > dist/latest.json
+             '. + { "manifest": $manifest_url, "download": $download_url }' module.json > dist/latest.json
 
       # Step 4: Upload release assets (zip file and updated module.json files)
       - name: Upload release assets
