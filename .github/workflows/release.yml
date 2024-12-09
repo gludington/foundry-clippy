@@ -17,7 +17,7 @@ jobs:
           zip -r your-module-${{ github.event.release.tag_name }}.zip *  # Adjust to match your project structure
 
       - name: Upload release zip
-        uses: softprops/action-gh-release@1
+        uses: softprops/action-gh-release@v1
         with:
           upload_url: ${{ github.event.release.upload_url }}
           asset_path: ./your-module-${{ github.event.release.tag_name }}.zip
@@ -32,7 +32,7 @@ jobs:
           }' > "v${{ github.event.release.tag_name }}/module.json"
 
       - name: Upload versioned manifest
-        uses: softprops/action-gh-release
+        uses: softprops/action-gh-release@v1
         with:
           upload_url: ${{ github.event.release.upload_url }}
           asset_path: ./v${{ github.event.release.tag_name }}/module.json
@@ -57,7 +57,7 @@ jobs:
           git push origin main
 
       - name: Upload versioned manifest (final step)
-        uses: softprops/action-gh-release
+        uses: softprops/action-gh-release@v1
         with:
           upload_url: ${{ github.event.release.upload_url }}
           asset_path: ./latest.json
