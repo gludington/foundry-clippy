@@ -1,6 +1,7 @@
 {
-    "FoundryClippy.pareworkflowerror": "Unable to parse workflows. Check the console log",
+    "FoundryClippy.parseworkflowerror": "Unable to parse workflows. Check the console log",
     "FoundryClippy.noworkflowforactionerror": "No workflow for action",
     "FoundryClippy.askclippy": "Ask Clippy for Help",
-    "FoundryClippy.greeting": "It looks like you are trying to do something.  Here is what I know how to do:"
+    "FoundryClippy.groupgreeting": "It looks like you are trying to do something.  I know so many things they are in groups:",
+    "FoundryClippy.workflowgreeting": "It looks like you are trying to do something.  Here is what I know how to do:"
 }

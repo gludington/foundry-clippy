@@ -1,6 +1,8 @@
 /**
  * @typedef {import('../types.js').Workflow} Workflow
+ * @typedef {import('../types.js').Workflow} WorkflowGroup
  */
+
 
 /**
  * @type {Workflow[]}
@@ -223,5 +225,34 @@ export const workflows = [
                 say: `<p>That's it!  Now you can click on that item you created every time, rather than open up your character sheet.</p>`
             }
         ]
+    },  {
+        name: "Adjust Volume",
+        id: "adjust-volumne",
+        steps: [{
+            say: `<p>As a paperclip, sometimes I need some help hearing.  We can go to the <b>Playlists</b></p>
+    <p>In the top of the right column (above my words), you will see a row of buttons.  Each button can be <b>Left Clicked</b> to change this column, or <b>Right Clicked</b> to pop it out as a nice floating window.</p>
+    <p><b>Right Click</></b> <i class="fas fa-music\"></i> at the top of the column to pop out the <b>Playists</b>.  That way we can still chat.</p>`,
+            unless: "return $('#playlists-popout').length > 0"
+        }, {
+            say: `<p>You already have a floating <b>Playlists window</b> out</p>
+                    <p>Smart of you to realize you can <b>Right Click</b> <i class="fas fa-music\"></i> at the top of the column to pop out <b>Playlists</b>.</p>`,
+            unless: "return $('#playlists-popout').length === 0"
+        }, {
+            waitFor: "renderPlaylistDirectory",
+            unless: "return $('#playlists-popout').length > 0"
+        }, {
+            say: `<p>Foundry has multiple sound channels.</p><ol><li>Music</li><li>Environment</li><li>Interface</li></ol><p>Music is for, well, music.  Environment are for those background noises or
+            sounds on the map, and interface is when UI elements want to tell you something.   You can move them up or down independently to hear things exactly how you want to hear.  Neat, huh?</p>`,
+        }, {
+            say: `<p>If a playlist is playing you have permission to see it, you may see that and control that track's volume yourself, as well.</p>`
+        }]
+    },
+]
+
+export const groups = [
+    {
+        name: "Core",
+        id: "core",
+        workflows: workflows
     }
 ]

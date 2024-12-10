@@ -1,5 +1,5 @@
 import { log } from "../main.js"
-import { workflows as dnd5e } from "./dnd5e.js"
+import { groups as dnd5e } from "./dnd5e.js"
 
 export const loadWorkflows = (sys) => {
     switch (sys.id) {
