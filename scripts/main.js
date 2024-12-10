@@ -5,6 +5,7 @@ export const CLIPPY = "📎";
 export const CLIPPY_IMAGE = `modules/${MODULE_ID}/assets/paperclip.png`;
 import { loadWorkflows } from "./systems/index.js";
 import { preloadTemplates, outputTemplate } from "../module/templateHelper.js";
+import { groups } from "./systems/dnd5e.js";
 
 /**
  * @typedef {import('./types.js').Workflow} Workflow
@@ -39,7 +40,15 @@ let userId;
 const say = async (content, buttons) => {
     if (buttons?.length) {
         const links = buttons.map(butt => {
-            return workflows.get(butt);
+            const action = butt.substring(0, butt.indexOf('-'));
+            const dest = butt.substring(butt.indexOf('-') + 1);
+            let name;
+            if (action === "group") {
+                name = groups.get(dest).name;
+            } else {
+                name = workflows.get(dest).name;
+            }
+            return { id: butt, name };
         })
         content += await outputTemplate("bottombuttons.hbs", { buttons: links })
     }

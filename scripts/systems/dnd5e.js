@@ -144,7 +144,7 @@ export const workflows = [
                 waitFor: "dnd5e.rollAttackV2",
             }, {
                 say:`<p>Now that's what I call an attack!  If you do not want to open the character sheet every time, why not</p>`,
-                buttons: ['make-macro-button']
+                buttons: ['workflow-make-macro-button']
             }
         ]
     }, {
@@ -190,7 +190,7 @@ export const workflows = [
              }, {
                 say:`<p>Some spells will call up a dialog for you to confirm elements of your casting, while others will output the cast directly to the chat.  If you do not
                 want to open your character sheet every time, you can</p>`,
-                buttons: ['make-macro-button']
+                buttons: ['workflow-make-macro-button']
             }
         ]
     }, {
