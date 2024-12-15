@@ -31,4 +31,9 @@
  * @typedef {Object} IdAndName
  * @property {string} id
  * @property {string} name
+ * 
+ * @typedef {Object} WorkflowGroup
+ * @property {string} name
+ * @property {string} id
+ * @property {Workflow[]} workflows
  */

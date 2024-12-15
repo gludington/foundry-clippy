@@ -1,7 +1,14 @@
 <div class="message-content">{{ content }}</div>
 <hr/>
 <div class="card-buttons">
+    {{#if workflows}}
     {{#each workflows}}
-    <button type="button" data-foundry-clippy-action="{{this.id}}">{{this.name}}</button>
+    <button type="button" data-foundry-clippy-action="workflow-{{this.id}}">{{this.name}}</button>
     {{/each}}
+    {{else if groups}}
+    {{#each groups}}
+    <button type="button" data-foundry-clippy-action="group-{{this.id}}">{{this.name}}</button>
+    {{/each}}
+    {{else}}
+    {{/if}}
 </div>

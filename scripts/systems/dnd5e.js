@@ -1,6 +1,8 @@
 /**
  * @typedef {import('../types.js').Workflow} Workflow
+ * @typedef {import('../types.js').Workflow} WorkflowGroup
  */
+
 
 /**
  * @type {Workflow[]}
@@ -142,7 +144,7 @@ export const workflows = [
                 waitFor: "dnd5e.rollAttackV2",
             }, {
                 say:`<p>Now that's what I call an attack!  If you do not want to open the character sheet every time, why not</p>`,
-                buttons: ['make-macro-button']
+                buttons: ['workflow-make-macro-button']
             }
         ]
     }, {
@@ -188,7 +190,7 @@ export const workflows = [
              }, {
                 say:`<p>Some spells will call up a dialog for you to confirm elements of your casting, while others will output the cast directly to the chat.  If you do not
                 want to open your character sheet every time, you can</p>`,
-                buttons: ['make-macro-button']
+                buttons: ['workflow-make-macro-button']
             }
         ]
     }, {
@@ -223,5 +225,56 @@ export const workflows = [
                 say: `<p>That's it!  Now you can click on that item you created every time, rather than open up your character sheet.</p>`
             }
         ]
+    },  {
+        name: "Adjust Volume",
+        id: "adjust-volume",
+        steps: [{
+            say: `<p>As a paperclip, sometimes I need some help hearing.  We can go to the <b>Playlists</b></p>
+    <p>In the top of the right column (above my words), you will see a row of buttons.  Each button can be <b>Left Clicked</b> to change this column, or <b>Right Clicked</b> to pop it out as a nice floating window.</p>
+    <p><b>Right Click</></b> <i class="fas fa-music\"></i> at the top of the column to pop out the <b>Playists</b>.  That way we can still chat.</p>`,
+            unless: "return $('#playlists-popout').length > 0"
+        }, {
+            say: `<p>You already have a floating <b>Playlists window</b> out</p>
+                    <p>Smart of you to realize you can <b>Right Click</b> <i class="fas fa-music\"></i> at the top of the column to pop out <b>Playlists</b>.</p>`,
+            unless: "return $('#playlists-popout').length === 0"
+        }, {
+            waitFor: "renderPlaylistDirectory",
+            unless: "return $('#playlists-popout').length > 0"
+        }, {
+            say: `<p>Foundry has multiple sound channels.</p><ol><li>Music</li><li>Environment</li><li>Interface</li></ol><p>Music is for, well, music.  Environment are for those background noises or
+            sounds on the map, and interface is when UI elements want to tell you something.   You can move them up or down independently to hear things exactly how you want to hear.  Neat, huh?</p>`,
+        }, {
+            say: `<p>If a playlist is playing you have permission to see it, you may see that and control that track's volume yourself, as well.</p>`
+        }]
+    },  {
+        name: "Measured Templates",
+        id: "measured-template",
+        steps: [{
+            say: `<p><b>Measured Templates</b> outline areas on the map, whether they be dangers, effects, or spells.  In fact, some spells will place measured templates, to show where that
+            fireball or lightning bolt hits.</p>
+    <p>Some spells or modules may even clean up the measured template automatically, but sometimes you have to do things yourself.  That's what confuses even smart paperclips like me.
+    You cannot add, modify, or delete templates without going to the template layer.  I can show you how.</p>
+    <p>In the buttons on the left hand side, one looks like a rulers <i class="fa-solid fa-ruler-combined"></i>.  Clicking on this will show the template controls.</p>`,
+        }, {
+            waitFor: "activateTemplateLayer",
+            unless: "game.canvas.templates.#active === true"
+        }, {
+            say: `<p>With the template controls open, you will see some new buttons -- circle, cone, and so on.  Hover over each button ro see the controls for each.</p>
+            <p>Once on the template layer, you can add, edit, or delete templates.</p>`,
+        }, {
+            say: `<p>When you are done, don't forget to click the <i class="fa-solid fa-user-alt"></i> Token Controls button to go back to the regular game token controls.</p>`
+        }, {
+            waitFor: "activateTokenLayer"
+        }, {
+            say: "Great job!  Enjoy your game!"
+        }]
+    }
+]
+
+export const groups = [
+    {
+        name: "Core",
+        id: "core",
+        workflows: workflows
     }
 ]

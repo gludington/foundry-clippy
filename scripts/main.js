@@ -5,6 +5,7 @@ export const CLIPPY = "📎";
 export const CLIPPY_IMAGE = `modules/${MODULE_ID}/assets/paperclip.png`;
 import { loadWorkflows } from "./systems/index.js";
 import { preloadTemplates, outputTemplate } from "../module/templateHelper.js";
+import { groups } from "./systems/dnd5e.js";
 
 /**
  * @typedef {import('./types.js').Workflow} Workflow
@@ -16,9 +17,14 @@ import { preloadTemplates, outputTemplate } from "../module/templateHelper.js";
 const userStatus = new Map();
 /**
  * the workflows we are going to load on startup
- * @type {Workflow[]}
+ * @type {Map<string, Workflow>}
  */
-let workflows;
+let workflows = new Map();
+/**
+ * the workflows we are going to load on startup
+ * @type {WorkflowGroup[]}
+ */
+let workflowGroups = new Map();
 
 /**
  * A place to store the game.user.id
@@ -34,7 +40,15 @@ let userId;
 const say = async (content, buttons) => {
     if (buttons?.length) {
         const links = buttons.map(butt => {
-            return workflows.find(flow => flow.id === butt);
+            const action = butt.substring(0, butt.indexOf('-'));
+            const dest = butt.substring(butt.indexOf('-') + 1);
+            let name;
+            if (action === "group") {
+                name = groups.get(dest).name;
+            } else {
+                name = workflows.get(dest).name;
+            }
+            return { id: butt, name };
         })
         content += await outputTemplate("bottombuttons.hbs", { buttons: links })
     }
@@ -108,7 +122,7 @@ const executeStep = (id) => {
     if (currentStep.unless) {
         skip = new Function('context', currentStep.unless)(workFlowContext.context);
     }
-    log(`${action} - ${skip}`)
+    log(`Executing: ${action} - skip: ${skip}`)
     switch (action) {
         case "say":
             if (!skip) {
@@ -174,12 +188,28 @@ Hooks.on("dnd5e.renderChatMessage", (message, originalHtml) => {
             originalHtml = avatar.html(`<img src="${CLIPPY_IMAGE}" alt = "${SPEAKER_ALIAS}"/>`);
         }
         html.find(`button[data-${MODULE_ID}-action]`).on("click", event => {
-            const action = event.currentTarget.getAttribute(`data-${MODULE_ID}-action`)
-            const workflow = workflows.find(workflow => workflow.id === action);
-            if (!workflow) {
-                ui.notifications.error(localize("noworkflowforactionerror"));
-            } else {
-                startWorkflow(workflow);
+            const actionAtt = event.currentTarget.getAttribute(`data-${MODULE_ID}-action`)
+            const action = actionAtt.substring(0, actionAtt.indexOf('-'));
+            const dest = actionAtt.substring(actionAtt.indexOf('-') + 1);
+            log(action, dest);
+            switch (action) {
+                case "workflow":
+                    const workflow = workflows.get(dest);
+                    if (!workflow) {
+                        ui.notifications.error(localize("noworkflowforactionerror"));
+                    } else {
+                        startWorkflow(workflow);
+                    }
+                break;
+                case "group": {
+                    const group = workflowGroups.get(dest);
+                    if (group) {
+                        greet([group]);
+                    } else {
+                        ui.notifications.error(localize("nogroupoforactionerror"));
+                    }
+
+                }
             }
         })
     }
@@ -204,27 +234,59 @@ Hooks.on("getSceneControlButtons", (controls) => {
     }
 });
 
+const groupGreet = (groups) => {
+    outputTemplate("greeting.hbs", { content: localize("groupgreeting"), groups}).then(content => {
+        say(content);
+    });
+}
+
+const workflowGreet = (workflows) => {
+    outputTemplate("greeting.hbs", { content: localize("workflowgreeting"), workflows}).then(content => {
+        say(content);
+    });
+}
+
+const greet = (groups) => {
+    if (groups.length > 1) {
+        groupGreet(groups);
+    } else {
+        workflowGreet(groups.values().next().value.workflows);
+    }
+}
+
 /**
  * initlize clippy on ready.
  */
 Hooks.on("ready", async () => {
-    log(`Initializing for system ${game.system.id}`);
+    //lets' just get it from foundry -- change if we go to typescript or evern just js with rollup to inject at build time
+    const mod = game.modules.get(MODULE_ID);
+    const version = mod.version;
+    log(`version ${version} Initializing for system ${game.system.id}`);
     userId = game.user.id;
     try {
-        workflows = await loadWorkflows(game.system);
-        log(`Loaded for ${game.system.id}`, workflows);
-        
+        const groups = await loadWorkflows(game.system);
+        log(`Loaded for ${game.system.id}`, groups);
         //add a single listener for every hook our system wants to listen to
         const foundHooks = new Map();
-        workflows.forEach(workflow => {
-            workflow.steps.forEach(step => {
-                if (step.waitFor) {
-                    if (!foundHooks.has(step.waitFor)) {
-                        Hooks.on(step.waitFor, (...args) => checkWaitFor(step.waitFor, args));
-                        foundHooks.set(step.waitFor, true);
-                    }
+        groups.forEach(group => {
+            if (workflowGroups.has(group.id)) {
+                throw `Duplicate group id ${group.id}`
+            }
+            workflowGroups.set(group.id, group);
+            group.workflows.forEach(workflow => {
+                if (workflows.has(workflow.id)) {
+                    throw `Duplicate workflow id ${workflow.id}`
                 }
-            })
+                workflows.set(workflow.id, workflow);
+                workflow.steps.forEach(step => {
+                    if (step.waitFor) {
+                        if (!foundHooks.has(step.waitFor)) {
+                            Hooks.on(step.waitFor, (...args) => checkWaitFor(step.waitFor, args));
+                            foundHooks.set(step.waitFor, true);
+                        }
+                    }
+                })
+            });
         });
     } catch (err) {
         log("Unable to load system", err);
@@ -233,14 +295,10 @@ Hooks.on("ready", async () => {
     }
     // preload our tempaltes
     const templates = await preloadTemplates();
-    log(templates);
-
     // expose a public facing api
     game.modules.get(MODULE_ID).api = { start: async () => {
         userStatus.clear();
-        outputTemplate("greeting.hbs", { content: localize("greeting"), workflows}).then(content => {
-            say(content);
-        });
+        greet(Array.from(workflowGroups.values()));                
     }}
     window[API_GLOBAL_NAME] = game.modules.get(MODULE_ID).api;
 })
