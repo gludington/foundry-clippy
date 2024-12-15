@@ -33,24 +33,42 @@ let workflowGroups = new Map();
 let userId;
 
 /**
+ * a hack to get at remote-highlight-ui's wonderful highlight function, pending talking with the author.
+ */
+let remoteHighlightUiCallback;
+
+/**
  * Output something to the chat.
  * @param {string} content 
  * @param {string[]} an optional array of strings pointing to workflow ids
  */
 const say = async (content, buttons) => {
+    log(content, buttons);
     if (buttons?.length) {
-        const links = buttons.map(butt => {
+        const links = buttons.filter(butt => {
+           return remoteHighlightUiCallback || !butt.startsWith("highlight"); 
+        }).map(butt => {
             const action = butt.substring(0, butt.indexOf('-'));
             const dest = butt.substring(butt.indexOf('-') + 1);
             let name;
-            if (action === "group") {
-                name = groups.get(dest).name;
-            } else {
-                name = workflows.get(dest).name;
+            switch (action) {
+                case "group":
+                    name = groups.get(dest).name;
+                    break;
+                case "workflow":
+                    name = workflows.get(dest).name;
+                    break;
+                case "highlight":
+                    name = "Show Me";
+                    break;
+                default:
+                    log("Invalid button action", action);
             }
             return { id: butt, name };
         })
-        content += await outputTemplate("bottombuttons.hbs", { buttons: links })
+        if (links.length) {
+            content += await outputTemplate("bottombuttons.hbs", { buttons: links })
+        }
     }
     ChatMessage.create({
         speaker: ChatMessage.getSpeaker({ alias: SPEAKER_ALIAS}),
@@ -120,6 +138,7 @@ const executeStep = (id) => {
     const action = Object.keys(currentStep).find(key => ['say','waitFor'].indexOf(key) > -1);
     let skip = false;
     if (currentStep.unless) {
+        log("FUCK FUCK", game.canvas.templates.active);
         skip = new Function('context', currentStep.unless)(workFlowContext.context);
     }
     log(`Executing: ${action} - skip: ${skip}`)
@@ -200,16 +219,17 @@ Hooks.on("dnd5e.renderChatMessage", (message, originalHtml) => {
                     } else {
                         startWorkflow(workflow);
                     }
-                break;
-                case "group": {
+                    break;
+                case "group":
                     const group = workflowGroups.get(dest);
                     if (group) {
                         greet([group]);
                     } else {
                         ui.notifications.error(localize("nogroupoforactionerror"));
                     }
-
-                }
+                    break;
+                case "highlight":
+                    highlight(dest);
             }
         })
     }
@@ -251,6 +271,12 @@ const greet = (groups) => {
         groupGreet(groups);
     } else {
         workflowGreet(groups.values().next().value.workflows);
+    }
+}
+
+const highlight = (ele) => {
+    if (remoteHighlightUiCallback) {
+        remoteHighlightUiCallback( {type: 'HIGHLIGHT_ELEMENT', selector: ele, playerId: userId})
     }
 }
 
@@ -299,6 +325,10 @@ Hooks.on("ready", async () => {
     game.modules.get(MODULE_ID).api = { start: async () => {
         userStatus.clear();
         greet(Array.from(workflowGroups.values()));                
-    }}
+    }, highlight: (str) => highlight(str)}
+    //check for a remote-highlight-ui and involve a local hack
+    log("Checking for remote-hightlight-ui");
+    remoteHighlightUiCallback = game.socket?._callbacks?.['$module.remote-highlight-ui']?.[0];
+    log("remote-hightlight-ui callback", remoteHighlightUiCallback);
     window[API_GLOBAL_NAME] = game.modules.get(MODULE_ID).api;
 })
