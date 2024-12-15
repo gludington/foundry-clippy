@@ -227,7 +227,7 @@ export const workflows = [
         ]
     },  {
         name: "Adjust Volume",
-        id: "adjust-volumne",
+        id: "adjust-volume",
         steps: [{
             say: `<p>As a paperclip, sometimes I need some help hearing.  We can go to the <b>Playlists</b></p>
     <p>In the top of the right column (above my words), you will see a row of buttons.  Each button can be <b>Left Clicked</b> to change this column, or <b>Right Clicked</b> to pop it out as a nice floating window.</p>
@@ -246,7 +246,29 @@ export const workflows = [
         }, {
             say: `<p>If a playlist is playing you have permission to see it, you may see that and control that track's volume yourself, as well.</p>`
         }]
-    },
+    },  {
+        name: "Measured Templates",
+        id: "measured-template",
+        steps: [{
+            say: `<p><b>Measured Templates</b> outline areas on the map, whether they be dangers, effects, or spells.  In fact, some spells will place measured templates, to show where that
+            fireball or lightning bolt hits.</p>
+    <p>Some spells or modules may even clean up the measured template automatically, but sometimes you have to do things yourself.  That's what confuses even smart paperclips like me.
+    You cannot add, modify, or delete templates without going to the template layer.  I can show you how.</p>
+    <p>In the buttons on the left hand side, one looks like a rulers <i class="fa-solid fa-ruler-combined"></i>.  Clicking on this will show the template controls.</p>`,
+        }, {
+            waitFor: "activateTemplateLayer",
+            unless: "game.canvas.templates.#active === true"
+        }, {
+            say: `<p>With the template controls open, you will see some new buttons -- circle, cone, and so on.  Hover over each button ro see the controls for each.</p>
+            <p>Once on the template layer, you can add, edit, or delete templates.</p>`,
+        }, {
+            say: `<p>When you are done, don't forget to click the <i class="fa-solid fa-user-alt"></i> Token Controls button to go back to the regular game token controls.</p>`
+        }, {
+            waitFor: "activateTokenLayer"
+        }, {
+            say: "Great job!  Enjoy your game!"
+        }]
+    }
 ]
 
 export const groups = [
