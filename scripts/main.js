@@ -138,7 +138,6 @@ const executeStep = (id) => {
     const action = Object.keys(currentStep).find(key => ['say','waitFor'].indexOf(key) > -1);
     let skip = false;
     if (currentStep.unless) {
-        log("FUCK FUCK", game.canvas.templates.active);
         skip = new Function('context', currentStep.unless)(workFlowContext.context);
     }
     log(`Executing: ${action} - skip: ${skip}`)
