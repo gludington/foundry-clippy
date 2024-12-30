@@ -132,15 +132,24 @@ export const workflows = [
                 say: `<p>Now that you have a target.  Let's attack!  Click on a weapon on your character sheet.</p>
                 <p>If the weapon has only an "Attack" property, it will take you to the roll dialog.  If it can do more than simply attack, you will see options.  Pick the <b>Attack</b> option.`
             }, {
-                waitFor: "renderRollConfigurationDialog"
+                waitFor: "renderRollConfigurationDialog",
+                unless: "return game.modules.get('ready-set-roll-5e') !== undefined"
             }, {
                 say:`<p>The roll configuration dialog will let you apply dnd specific bonuses and attributes to your roll, as well as select advantage or disadvantage.</p><p>As you get
                 more comfortable, you can use control keys to do this more quickly, but I'm just a paperclip.  I like to keep it simple.  Choose your options
-                and press a roll button.</p>`
+                and press a roll button.</p>`,
+                unless: "return game.modules.get('ready-set-roll-5e') !== undefined"
             }, {
                 waitFor: "dnd5e.rollAttackV2",
+                unless: "return game.modules.get('ready-set-roll-5e') !== undefined"
             }, {
-                say:`<p>Now that's what I call an attack!  If you do not want to open the character sheet every time, why not</p>`
+                waitFor: "dnd5e.renderChatMessage",
+                test: `return hookArgs[0]?.rolls?.length`,
+                unless: "return game.modules.get('ready-set-roll-5e') === undefined"
+            },
+            {
+                say:`<p>Now that's what I call an attack!  If you do not want to open the character sheet every time, why not</p>`,
+                buttons: ['workflow-make-macro-button']
             }
         ]
     }, {
