@@ -123,8 +123,9 @@ export const workflows = [
             ...createCharsheetSayWaitPair("Inventory", `<img src="systems/dnd5e/icons/svg/backpack.svg"/ width="20" height="20">`, "inventory"),
             {
                 say: `<p>On the inventory page, you will see a section called weapons.  But before we hit somebody, let's find somebody to target.</p>
-                <p>To target somebody, move your mouse over the token you want to hit, and hit <b>T</b>.  This part is normally optional, but it can make things easier
-                on your Gamemaster, and I'm a courteous paperclip.  You can use <b>Shift-T</b> to target multiple tokens.
+                <p>To target somebody, move your mouse over the token you want to hit, and hit <b>T</b>.  (If your character sheet is int he way,
+                you can move it, or double click on your sheet's title bar to collapse it.  And then double click on the collapsed bar to bring it back.)
+                <p>This part is normally optional, but it can make things easier on your Gamemaster, and I'm a courteous paperclip.  You can use <b>Shift-T</b> to target multiple tokens.
                 If there are no other tokens here, just target yourself so we can move on.  Silly, but its an example.</p>`
             }, {
                 waitFor: "targetToken",
