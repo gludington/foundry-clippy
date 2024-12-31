@@ -129,6 +129,7 @@ export const workflows = [
                 If there are no other tokens here, just target yourself so we can move on.  Silly, but its an example.</p>`
             }, {
                 waitFor: "targetToken",
+                test: "return hookArgs[0] === game.user"
             }, {
                 say: `<p>Now that you have a target.  Let's attack!  Click on a weapon on your character sheet.</p>
                 <p>If the weapon has only an "Attack" property, it will take you to the roll dialog.  If it can do more than simply attack, you will see options.  Pick the <b>Attack</b> option.`
@@ -142,6 +143,7 @@ export const workflows = [
                 unless: "return game.modules.get('ready-set-roll-5e') !== undefined"
             }, {
                 waitFor: "dnd5e.rollAttackV2",
+                test: "return true",
                 unless: "return game.modules.get('ready-set-roll-5e') !== undefined"
             }, {
                 waitFor: "dnd5e.renderChatMessage",

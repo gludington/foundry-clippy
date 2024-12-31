@@ -104,11 +104,11 @@ export const log = (message, ...args) => {
 }
 
 /**
- * Start a workflow at its first step and no context.
+ * Start a workflow at its first step and an empty context.
  * @param {Workflow} workflow 
  */
 const startWorkflow = (workflow) => {
-    userStatus.set(workflow.id, { workflow, current: 0 });
+    userStatus.set(workflow.id, { workflow, context: workflow.context || {}, current: 0 });
     executeStep(workflow.id);
 }
 
