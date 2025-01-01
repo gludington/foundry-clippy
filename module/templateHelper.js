@@ -1,7 +1,7 @@
 import { log } from "../scripts/main.js";
 import { MODULE_ID } from "../scripts/main.js";
 
-export const preloadTemplates = async function() {
+export const preloadTemplates = async function(system) {
 	const templatePaths = [
 		// Add paths to "modules/senses/templates"
 		"greeting.hbs"

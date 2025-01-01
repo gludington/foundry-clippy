@@ -18,7 +18,7 @@ const createCharsheetSayWaitPair = (tabName, tabIcon, tabDataKey) => {
     ]
 }
 
-export const findActor = () => {
+export const findActorFromFirstOpenCharacterSheet = () => {
     const name = $('header.sheet-header div.document-name')[0]?.innerHTML;
     if (name) {
         const actor = game.actors.find(act => act.name === name);
@@ -123,18 +123,18 @@ export const workflows = [
         id: "make-attack",
         steps: [
             {
-                say:`<p>First thing we need to do is open your character sheet.  You can do that by <b>double-clicking</b> your token.</p>`,
+                sayHbs:"general/opencharactersheet.hbs",
                 unless: "return $('header.sheet-header').length > 0"
             }, {
-                say:`<p>Your character sheet is already open, let's get to work!</p>`,
+                sayHbs: "general/sheetalreadyopen.hbs",
                 unless: "return $('header.sheet-header').length === 0",
-                context: "context.data.actor = context.scripts.findActor()"
+                context: "context.data.actor = context.scripts.findActorFromFirstOpenCharacterSheet()"
             }, {
                 waitFor: "renderActorSheet",
                 unless: "return $('header.sheet-header').length > 0",
-                context: "return { ...context, hookArgs[0].object}"
+                context: "context.data.actor = hookArgs[0].object"
             }, {
-                say:`<p>There it is!  The standard D&D5e Character has most attacks on the <b>Inventory</b> page.</p>`                
+                sayHbs: "general/charactersheetwithactorname.hbs"
             },
             ...createCharsheetSayWaitPair("Inventory", `<img src="systems/dnd5e/icons/svg/backpack.svg"/ width="20" height="20">`, "inventory"),
             {
@@ -176,10 +176,10 @@ export const workflows = [
         id: "cast-spell",
         steps: [
             {
-                say:`<p>First thing we need to do is open your character sheet.  You can do that by <b>double-clicking</b> your token.</p>`,
+                sayHbs:"general/opencharactersheet.hbs",
                 unless: "return $('header.sheet-header').length > 0"
             }, {
-                say:`<p>Your character sheet is already open, let's get to work!</p>`,
+                sayHbs: "general/sheetalreadyopen.hbs",
                 unless: "return $('header.sheet-header').length === 0"
             }, {
                 waitFor: "renderActorSheet",
@@ -293,10 +293,12 @@ export const workflows = [
     }
 ]
 
-export const groups = [
+const groups = [
     {
         name: "Core",
         id: "core",
         workflows: workflows
     }
 ]
+
+export default { groups, workflows, scripts: [ findActorFromFirstOpenCharacterSheet] }

@@ -3,10 +3,10 @@ export const API_GLOBAL_NAME = "FoundryClippy";
 export const SPEAKER_ALIAS = "Clippy";
 export const CLIPPY = "📎";
 export const CLIPPY_IMAGE = `modules/${MODULE_ID}/assets/paperclip.png`;
-import { loadWorkflows } from "./systems/index.js";
+import { loadSystem } from "./systems/index.js";
 import { preloadTemplates, outputTemplate } from "../module/templateHelper.js";
 import { groups } from "./systems/dnd5e.js";
-import { findActor } from "./systems/dnd5e.js";
+
 /**
  * @typedef {import('./types.js').Workflow} Workflow
  */
@@ -25,6 +25,8 @@ let workflows = new Map();
  * @type {WorkflowGroup[]}
  */
 let workflowGroups = new Map();
+
+let scripts = {}; //not a map because we are going to refer to them in a dynamic context
 
 /**
  * A place to store the game.user.id
@@ -129,19 +131,15 @@ const nextStep = (id) => {
 }
 
 const createAndExecuteDynamicContext = (fnString, workFlowContext, hookArgs) => {
-    const sandbox = {scripts: { findActor: findActor }, foo: () => { alert(12) }, data: workFlowContext.context.data || {}}
+    const sandbox = {scripts:scripts, data: workFlowContext.context.data || {}}
     const retVal = new Function(['context', 'hookArgs'], fnString)(sandbox, hookArgs);
     workFlowContext.context.data  = sandbox.data;
     return retVal;
 }
 
-const createAndExecuteDynamicFunction = (fnString, workFlowContext, hookArgs) => {
-    console.info("FUCKING DYN", workFlowContext);
-    const sandbox = { foo: () => { alert(12) }, data: workFlowContext.context.data || {}}
-    console.info("FUCKING BEFORE", sandbox);
+const createAndExecuteDynamicFunctionReturn = (fnString, workFlowContext, hookArgs) => {
+    const sandbox = { scripts: scripts, data: workFlowContext.context.data || {}}
     const retVal = new Function(['context', 'hookArgs'], fnString)(sandbox, hookArgs);
-    console.info("FUCKING AFTER", sandbox);
-    workFlowContext.context.data  = sandbox.data;
     return retVal;
 }
 /**
@@ -151,24 +149,41 @@ const createAndExecuteDynamicFunction = (fnString, workFlowContext, hookArgs) =>
 const executeStep = (id) => {
     const workFlowContext = userStatus.get(id);
     const currentStep = workFlowContext.workflow.steps[workFlowContext.current];
-    const action = Object.keys(currentStep).find(key => ['say','waitFor'].indexOf(key) > -1);
+    const action = Object.keys(currentStep).find(key => ['sayHbs', 'say', 'waitFor'].indexOf(key) > -1);
     let skip = false;
     if (currentStep.unless) {
-        skip = new Function('context', currentStep.unless)(workFlowContext.context);
+        skip = createAndExecuteDynamicFunctionReturn(currentStep.unless, workFlowContext, [])
     }
     log(`Executing: ${action} - skip: ${skip}`)
     switch (action) {
         case "say":
             if (!skip) {
-                say(currentStep.say, currentStep.buttons);
                 if (currentStep.context) {
-                    console.info("before", workFlowContext.context);
+                    log("before", workFlowContext.context);
                     createAndExecuteDynamicContext(currentStep.context, workFlowContext, []);
-                    console.info("after", workFlowContext.context);
+                    log("after", workFlowContext.context);
                 }
+                say(currentStep.say, currentStep.buttons);
             }
             nextStep(id);
             break;
+        case "sayHbs":;
+            if (!skip) {
+                const tmplPath = currentStep.sayHbs;
+                console.info(tmplPath, workFlowContext);
+                if (currentStep.context) {
+                    log("before", workFlowContext.context);
+                    createAndExecuteDynamicContext(currentStep.context, workFlowContext, []);
+                    log("after", workFlowContext.context);
+                }
+                outputTemplate(`${game.system.id}/${tmplPath}`, { context: workFlowContext.context }).then(content => {
+                    say(content, currentStep.buttons);
+                    nextStep(id);
+                });
+            } else {
+                nextStep(id);
+            }
+            break;            
         case "waitFor":
             if (skip) {
                 nextStep(id);
@@ -186,19 +201,21 @@ const checkWaitFor = (hook, args) => {
     if (userStatus.size > 0) {
         const matches = [];
         userStatus.entries().forEach((entry) => {
-            const currentStep = entry[1].workflow.steps[entry[1].current];
+            const workflowContext = entry[1];
+            const currentStep = workflowContext.workflow.steps[entry[1].current];
             if (currentStep.waitFor === hook) {
                 if (currentStep.test) {
-                    const result = new Function(['context', 'hookArgs'], currentStep.test)(entry[1].context, [...args]);
+                    const result = createAndExecuteDynamicFunctionReturn(currentStep.unless, workFlowContext, [...args]);
                     if (result) {
                         matches.push(entry[0])
                     }                
                 } else {
                     matches.push(entry[0]);
                 }
-                if (currentStep.context) {
-                    const ctx = new Function(['context', 'hookArgs'], currentStep.context)(entry[1].context, [...args]);
-                    entry[1].context = ctx;
+                if (currentStep.context) {;
+                    log("before", workflowContext.context);
+                    createAndExecuteDynamicContext(currentStep.context, workflowContext, [...args]);
+                    log("after", workflowContext.context);
                 }
             }
         })
@@ -310,11 +327,11 @@ Hooks.on("ready", async () => {
     log(`version ${version} Initializing for system ${game.system.id}`);
     userId = game.user.id;
     try {
-        const groups = await loadWorkflows(game.system);
-        log(`Loaded for ${game.system.id}`, groups);
+        const system = await loadSystem(game.system);
+        log(`Loaded for ${game.system.id}`, system);
         //add a single listener for every hook our system wants to listen to
         const foundHooks = new Map();
-        groups.forEach(group => {
+        system.groups.forEach(group => {
             if (workflowGroups.has(group.id)) {
                 throw `Duplicate group id ${group.id}`
             }
@@ -334,13 +351,22 @@ Hooks.on("ready", async () => {
                 })
             });
         });
+        system.scripts.forEach((script) => {
+            if (typeof script !== 'function' || !script.name) {
+                throw "All scripts must be named functions";
+            }
+            scripts[script.name] =  script;
+        })
     } catch (err) {
+        debugger;
         log("Unable to load system", err);
         ui.notifications.error(localize("parseworkflowerror"));
         return;
     }
     // preload our tempaltes
-    const templates = await preloadTemplates();
+    const templates = await preloadTemplates(game.system.id);
+    //TODO any way to preload system templates, perhaps by dynamically inspecting workflows?
+     
     // expose a public facing api
     game.modules.get(MODULE_ID).api = { start: async () => {
         userStatus.clear();
