@@ -5,13 +5,12 @@ export const CLIPPY = "📎";
 export const CLIPPY_IMAGE = `modules/${MODULE_ID}/assets/paperclip.png`;
 import { loadSystem } from "./systems/index.js";
 import { preloadTemplates, outputTemplate } from "../module/templateHelper.js";
-import { groups } from "./systems/dnd5e.js";
 
 /**
  * @typedef {import('./types.js').Workflow} Workflow
  */
 
-/**
+/**f
  * @type {Map<string, WorkflowContext>}
  */
 const userStatus = new Map();
@@ -201,11 +200,11 @@ const checkWaitFor = (hook, args) => {
     if (userStatus.size > 0) {
         const matches = [];
         userStatus.entries().forEach((entry) => {
-            const workflowContext = entry[1];
-            const currentStep = workflowContext.workflow.steps[entry[1].current];
+            const workFlowContext = entry[1];
+            const currentStep = workFlowContext.workflow.steps[entry[1].current];
             if (currentStep.waitFor === hook) {
                 if (currentStep.test) {
-                    const result = createAndExecuteDynamicFunctionReturn(currentStep.unless, workFlowContext, [...args]);
+                    const result = createAndExecuteDynamicFunctionReturn(currentStep.test, workFlowContext, [...args]);
                     if (result) {
                         matches.push(entry[0])
                     }                
@@ -213,9 +212,9 @@ const checkWaitFor = (hook, args) => {
                     matches.push(entry[0]);
                 }
                 if (currentStep.context) {;
-                    log("before", workflowContext.context);
-                    createAndExecuteDynamicContext(currentStep.context, workflowContext, [...args]);
-                    log("after", workflowContext.context);
+                    log("before", workFlowContext.context);
+                    createAndExecuteDynamicContext(currentStep.context, workFlowContext, [...args]);
+                    log("after", workFlowContext.context);
                 }
             }
         })
@@ -358,7 +357,6 @@ Hooks.on("ready", async () => {
             scripts[script.name] =  script;
         })
     } catch (err) {
-        debugger;
         log("Unable to load system", err);
         ui.notifications.error(localize("parseworkflowerror"));
         return;
