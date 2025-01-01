@@ -26,7 +26,11 @@
  * @typedef {Object} WorkflowContext
  * @property {Workflow} workflow
  * @property {number} current
- * @property {any} [context]
+ * @property {ScriptContext} context
+ * 
+ * @typedef {Object} ScriptContext
+ * @property {any} data
+ * @property {any} scripts
  * 
  * @typedef {Object} IdAndName
  * @property {string} id

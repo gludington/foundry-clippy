@@ -18,6 +18,20 @@ const createCharsheetSayWaitPair = (tabName, tabIcon, tabDataKey) => {
     ]
 }
 
+export const findActor = () => {
+    const name = $('header.sheet-header div.document-name')[0]?.innerHTML;
+    if (name) {
+        const actor = game.actors.find(act => act.name === name);
+        if (actor) {
+            if (Array.isArray(actor)) {
+                actor = actor[0];
+            }
+            return actor;
+        }
+    }
+    return undefined;
+}
+
 /**
  * @type {Workflow[]}
  */
@@ -113,10 +127,12 @@ export const workflows = [
                 unless: "return $('header.sheet-header').length > 0"
             }, {
                 say:`<p>Your character sheet is already open, let's get to work!</p>`,
-                unless: "return $('header.sheet-header').length === 0"
+                unless: "return $('header.sheet-header').length === 0",
+                context: "context.data.actor = context.scripts.findActor()"
             }, {
                 waitFor: "renderActorSheet",
-                unless: "return $('header.sheet-header').length > 0"
+                unless: "return $('header.sheet-header').length > 0",
+                context: "return { ...context, hookArgs[0].object}"
             }, {
                 say:`<p>There it is!  The standard D&D5e Character has most attacks on the <b>Inventory</b> page.</p>`                
             },

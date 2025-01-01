@@ -6,7 +6,7 @@ export const CLIPPY_IMAGE = `modules/${MODULE_ID}/assets/paperclip.png`;
 import { loadWorkflows } from "./systems/index.js";
 import { preloadTemplates, outputTemplate } from "../module/templateHelper.js";
 import { groups } from "./systems/dnd5e.js";
-
+import { findActor } from "./systems/dnd5e.js";
 /**
  * @typedef {import('./types.js').Workflow} Workflow
  */
@@ -128,6 +128,22 @@ const nextStep = (id) => {
     }
 }
 
+const createAndExecuteDynamicContext = (fnString, workFlowContext, hookArgs) => {
+    const sandbox = {scripts: { findActor: findActor }, foo: () => { alert(12) }, data: workFlowContext.context.data || {}}
+    const retVal = new Function(['context', 'hookArgs'], fnString)(sandbox, hookArgs);
+    workFlowContext.context.data  = sandbox.data;
+    return retVal;
+}
+
+const createAndExecuteDynamicFunction = (fnString, workFlowContext, hookArgs) => {
+    console.info("FUCKING DYN", workFlowContext);
+    const sandbox = { foo: () => { alert(12) }, data: workFlowContext.context.data || {}}
+    console.info("FUCKING BEFORE", sandbox);
+    const retVal = new Function(['context', 'hookArgs'], fnString)(sandbox, hookArgs);
+    console.info("FUCKING AFTER", sandbox);
+    workFlowContext.context.data  = sandbox.data;
+    return retVal;
+}
 /**
  * Execute a step in the workflow.  Could be part of nextStep, since it should only be called there, but broken out in case.
  * @param {string} id the id of the flow to execute.
@@ -145,6 +161,11 @@ const executeStep = (id) => {
         case "say":
             if (!skip) {
                 say(currentStep.say, currentStep.buttons);
+                if (currentStep.context) {
+                    console.info("before", workFlowContext.context);
+                    createAndExecuteDynamicContext(currentStep.context, workFlowContext, []);
+                    console.info("after", workFlowContext.context);
+                }
             }
             nextStep(id);
             break;
